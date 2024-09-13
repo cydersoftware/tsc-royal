@@ -33,10 +33,10 @@ bullets = []
 walls = []
 
 # Constants
-BULLET_SPEED = 10
-BULLET_RADIUS = 5
-WALL_MAX_HEALTH = 3
-PLAYER_RADIUS = 20
+BULLET_SPEED = 100
+BULLET_RADIUS = 7
+WALL_MAX_HEALTH = 5
+PLAYER_RADIUS = 40
 
 
 def generate_maze():
@@ -139,7 +139,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
                 await broadcast(json.dumps({"type": "throw", "bullet": new_bullet}))
             elif event["type"] == "emote":
                 # Handle emotes
-                await broadcast(json.dumps({"type": "emote", "client_id": client_id, "emote": event["emote"]}))
+                await broadcast(json.dumps({"type": "emote", "client_id": client_id, "emote": 'Cory'}))
     except WebSocketDisconnect:
         del clients[client_id]
         del players[client_id]

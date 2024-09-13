@@ -1,6 +1,5 @@
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-const emoteSelect = document.getElementById('emote-select');
 
 let clientId = Math.floor(Math.random() * 1000);
 let players = {};
@@ -14,6 +13,9 @@ const PLAYER_SPEED = 5;
 const PLAYER_RADIUS = 20;
 const BULLET_SPEED = 10;
 const BULLET_RADIUS = 5;
+
+const emotes = ['😀', '😂', '😍', '😎', '🤔', '😱'];
+let selectedEmote = null;
 
 const ws = new WebSocket(`ws://${window.location.host}/ws/${clientId}`);
 
@@ -116,17 +118,14 @@ function updatePlayerPosition() {
         const newX = Math.max(PLAYER_RADIUS, Math.min(WORLD_WIDTH - PLAYER_RADIUS, players[clientId].x + dx));
         const newY = Math.max(PLAYER_RADIUS, Math.min(WORLD_HEIGHT - PLAYER_RADIUS, players[clientId].y + dy));
 
-        // Check collision with walls
         if (!checkWallCollision(newX, newY)) {
             ws.send(JSON.stringify({ type: 'move', x: newX, y: newY }));
         }
     }
 
-    // Update camera position
     camera.x = players[clientId].x - canvas.width / 2;
     camera.y = players[clientId].y - canvas.height / 2;
 
-    // Clamp camera to world bounds
     camera.x = Math.max(0, Math.min(WORLD_WIDTH - canvas.width, camera.x));
     camera.y = Math.max(0, Math.min(WORLD_HEIGHT - canvas.height, camera.y));
 }
@@ -218,7 +217,7 @@ function drawPlayer(player, id) {
 
     if (player.emote) {
         ctx.fillStyle = 'black';
-        ctx.font = '12px Arial';
+        ctx.font = '24px Arial';
         ctx.fillText(player.emote, player.x - camera.x, player.y - camera.y - 30);
     }
 }
@@ -230,26 +229,41 @@ function drawBullet(bullet) {
     ctx.fill();
 }
 
+function drawEmoteSelector() {
+    const padding = 10;
+    const emoteSize = 40;
+    const totalWidth = emotes.length * (emoteSize + padding) - padding;
+    let startX = (canvas.width - totalWidth) / 2;
+
+    emotes.forEach((emote, index) => {
+        ctx.fillStyle = selectedEmote === emote ? 'lightblue' : 'white';
+        ctx.fillRect(startX, 10, emoteSize, emoteSize);
+        ctx.fillStyle = 'black';
+        ctx.font = '24px Arial';
+        ctx.fillText(emote, startX + 8, 40);
+        startX += emoteSize + padding;
+    });
+}
+
 function updateGame() {
     updatePlayerPosition();
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw background
     ctx.fillStyle = '#e0e0e0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     drawWalls();
 
-    // Draw players
     for (let id in players) {
         drawPlayer(players[id], id);
     }
 
-    // Draw bullets
     for (let bullet of bullets) {
         drawBullet(bullet);
     }
+
+    drawEmoteSelector();
 
     requestAnimationFrame(updateGame);
 }
@@ -258,9 +272,36 @@ const keys = {};
 
 window.addEventListener('keydown', (e) => {
     keys[e.key] = true;
-    if (e.code === 'Space' && players[clientId]) {
+});
+
+window.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+});
+
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    // Check if click is on emote selector
+    const emoteSize = 40;
+    const padding = 10;
+    const totalWidth = emotes.length * (emoteSize + padding) - padding;
+    const startX = (canvas.width - totalWidth) / 2;
+
+    if (clickY < 50) {
+        emotes.forEach((emote, index) => {
+            if (clickX >= startX + index * (emoteSize + padding) &&
+                clickX < startX + (index + 1) * (emoteSize + padding) &&
+                clickY >= 10 && clickY < 50) {
+                selectedEmote = emote;
+                ws.send(JSON.stringify({ type: 'emote', emote: selectedEmote }));
+            }
+        });
+    } else if (players[clientId]) {
+        // Throw bullet
         const player = players[clientId];
-        const angle = Math.random() * 2 * Math.PI;
+        const angle = Math.atan2(clickY + camera.y - player.y, clickX + camera.x - player.x);
         ws.send(JSON.stringify({
             type: 'throw',
             x: player.x,
@@ -271,14 +312,6 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-window.addEventListener('keyup', (e) => {
-    keys[e.key] = false;
-});
-
-emoteSelect.addEventListener('change', (e) => {
-    ws.send(JSON.stringify({ type: 'emote', emote: e.target.value }));
-});
-
 ws.onopen = () => {
     playerSvg = generatePlayerSvg();
 
@@ -287,12 +320,10 @@ ws.onopen = () => {
     };
 };
 
-// Prevent default behavior for arrow keys to avoid scrolling
 window.addEventListener('keydown', function(e) {
     if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].indexOf(e.code) > -1) {
         e.preventDefault();
     }
 }, false);
 
-// Initial canvas resize
 resizeCanvas();
