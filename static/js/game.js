@@ -1,5 +1,6 @@
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
+const emoteSelect = document.getElementById('emote-select');
 
 let clientId = Math.floor(Math.random() * 1000);
 let players = {};
@@ -13,9 +14,9 @@ const PLAYER_SPEED = 5;
 const PLAYER_RADIUS = 20;
 const BULLET_SPEED = 10;
 const BULLET_RADIUS = 5;
-
-const emotes = ['😀', '😂', '😍', '😎', '🤔', '😱'];
-let selectedEmote = null;
+const MAX_HEALTH = 100;
+const GUN_LENGTH = 30; // Length of the "gun" extending from the player
+const FLASH_DURATION = 100; // Duration of muzzle flash in milliseconds
 
 const ws = new WebSocket(`ws://${window.location.host}/ws/${clientId}`);
 
@@ -25,16 +26,29 @@ ws.onmessage = (event) => {
     switch (data.type) {
         case 'init':
             players = data.players;
+            // Initialize angle and flashTimer for each player
+            for (let id in players) {
+                players[id].angle = players[id].angle || 0;
+                players[id].flashTimer = 0;
+            }
             walls = data.walls;
             WORLD_WIDTH = data.world_width;
             WORLD_HEIGHT = data.world_height;
             resizeCanvas();
             break;
         case 'move':
-            players[data.client_id] = { x: data.x, y: data.y };
+            if (!players[data.client_id]) {
+                players[data.client_id] = {};
+            }
+            players[data.client_id].x = data.x;
+            players[data.client_id].y = data.y;
+            players[data.client_id].angle = data.angle;
             break;
         case 'throw':
             bullets.push(data.bullet);
+            if (data.client_id === clientId) {
+                players[clientId].flashTimer = FLASH_DURATION;
+            }
             break;
         case 'updateBullets':
             bullets = data.bullets;
@@ -51,6 +65,16 @@ ws.onmessage = (event) => {
         case 'disconnect':
             delete players[data.client_id];
             break;
+        case 'hit':
+            players[data.client_id].health = data.health;
+            break;
+        case 'respawn':
+            players[data.client_id] = {
+                x: data.x,
+                y: data.y,
+                health: data.health
+            };
+            break;
     }
 };
 
@@ -61,16 +85,20 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 
-function generatePlayerSvg() {
+function generatePlayerSvg(health) {
     const svgNS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNS, "svg");
     svg.setAttribute("viewBox", "0 0 40 40");
+
+    // Calculate color based on health
+    const hue = (health / MAX_HEALTH) * 120; // 120 is green, 0 is red
+    const color = `hsl(${hue}, 100%, 50%)`;
 
     const body = document.createElementNS(svgNS, "circle");
     body.setAttribute("cx", "20");
     body.setAttribute("cy", "20");
     body.setAttribute("r", "18");
-    body.setAttribute("fill", "#3498db");
+    body.setAttribute("fill", color);
     body.setAttribute("stroke", "#2980b9");
     body.setAttribute("stroke-width", "2");
 
@@ -118,18 +146,23 @@ function updatePlayerPosition() {
         const newX = Math.max(PLAYER_RADIUS, Math.min(WORLD_WIDTH - PLAYER_RADIUS, players[clientId].x + dx));
         const newY = Math.max(PLAYER_RADIUS, Math.min(WORLD_HEIGHT - PLAYER_RADIUS, players[clientId].y + dy));
 
+        // Calculate new angle
+        players[clientId].angle = Math.atan2(dy, dx);
+
+        // Check collision with walls
         if (!checkWallCollision(newX, newY)) {
-            ws.send(JSON.stringify({ type: 'move', x: newX, y: newY }));
+            ws.send(JSON.stringify({ type: 'move', x: newX, y: newY, angle: players[clientId].angle }));
         }
     }
 
+    // Update camera position
     camera.x = players[clientId].x - canvas.width / 2;
     camera.y = players[clientId].y - canvas.height / 2;
 
+    // Clamp camera to world bounds
     camera.x = Math.max(0, Math.min(WORLD_WIDTH - canvas.width, camera.x));
     camera.y = Math.max(0, Math.min(WORLD_HEIGHT - canvas.height, camera.y));
 }
-
 function checkWallCollision(x, y) {
     for (let wall of walls) {
         if (x + PLAYER_RADIUS > wall.x && x - PLAYER_RADIUS < wall.x + wall.width &&
@@ -204,6 +237,7 @@ function drawPlayer(player, id) {
     const isCurrentPlayer = id == clientId;
     ctx.save();
     ctx.translate(player.x - camera.x, player.y - camera.y);
+    ctx.rotate(player.angle);
 
     if (isCurrentPlayer) {
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
@@ -212,13 +246,44 @@ function drawPlayer(player, id) {
         ctx.shadowOffsetY = 2;
     }
 
-    ctx.drawImage(playerSvg, -PLAYER_RADIUS, -PLAYER_RADIUS, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2);
+    // Generate player SVG based on current health
+    const playerImg = generatePlayerSvg(player.health);
+    ctx.drawImage(playerImg, -PLAYER_RADIUS, -PLAYER_RADIUS, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2);
+
+    // Draw "gun"
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(GUN_LENGTH, 0);
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Draw muzzle flash
+    if (player.flashTimer > 0) {
+        ctx.beginPath();
+        ctx.moveTo(GUN_LENGTH, 0);
+        ctx.lineTo(GUN_LENGTH + 10, -5);
+        ctx.lineTo(GUN_LENGTH + 20, 0);
+        ctx.lineTo(GUN_LENGTH + 10, 5);
+        ctx.fillStyle = 'yellow';
+        ctx.fill();
+    }
+
+    // Draw health bar
+    ctx.rotate(-player.angle); // Rotate back to draw health bar horizontally
+    const healthBarWidth = PLAYER_RADIUS * 2;
+    const healthBarHeight = 5;
+    ctx.fillStyle = 'red';
+    ctx.fillRect(-PLAYER_RADIUS, -PLAYER_RADIUS - 10, healthBarWidth, healthBarHeight);
+    ctx.fillStyle = 'green';
+    ctx.fillRect(-PLAYER_RADIUS, -PLAYER_RADIUS - 10, healthBarWidth * (player.health / MAX_HEALTH), healthBarHeight);
+
     ctx.restore();
 
     if (player.emote) {
         ctx.fillStyle = 'black';
-        ctx.font = '24px Arial';
-        ctx.fillText(player.emote, player.x - camera.x, player.y - camera.y - 30);
+        ctx.font = '12px Arial';
+        ctx.fillText(player.emote, player.x - camera.x, player.y - camera.y - 40);
     }
 }
 
@@ -229,41 +294,29 @@ function drawBullet(bullet) {
     ctx.fill();
 }
 
-function drawEmoteSelector() {
-    const padding = 10;
-    const emoteSize = 40;
-    const totalWidth = emotes.length * (emoteSize + padding) - padding;
-    let startX = (canvas.width - totalWidth) / 2;
-
-    emotes.forEach((emote, index) => {
-        ctx.fillStyle = selectedEmote === emote ? 'lightblue' : 'white';
-        ctx.fillRect(startX, 10, emoteSize, emoteSize);
-        ctx.fillStyle = 'black';
-        ctx.font = '24px Arial';
-        ctx.fillText(emote, startX + 8, 40);
-        startX += emoteSize + padding;
-    });
-}
-
 function updateGame() {
     updatePlayerPosition();
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Draw background
     ctx.fillStyle = '#e0e0e0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     drawWalls();
 
+    // Draw players
     for (let id in players) {
         drawPlayer(players[id], id);
+        if (players[id].flashTimer > 0) {
+            players[id].flashTimer -= 16; // Assume 60 FPS, so each frame is about 16ms
+        }
     }
 
+    // Draw bullets
     for (let bullet of bullets) {
         drawBullet(bullet);
     }
-
-    drawEmoteSelector();
 
     requestAnimationFrame(updateGame);
 }
@@ -272,58 +325,43 @@ const keys = {};
 
 window.addEventListener('keydown', (e) => {
     keys[e.key] = true;
+    if (e.code === 'Space' && players[clientId]) {
+        const player = players[clientId];
+        const bulletStartX = player.x + Math.cos(player.angle) * GUN_LENGTH;
+        const bulletStartY = player.y + Math.sin(player.angle) * GUN_LENGTH;
+        ws.send(JSON.stringify({
+            type: 'throw',
+            x: bulletStartX,
+            y: bulletStartY,
+            angle: player.angle
+        }));
+        player.flashTimer = FLASH_DURATION;
+    }
 });
 
 window.addEventListener('keyup', (e) => {
     keys[e.key] = false;
 });
 
-canvas.addEventListener('click', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
-    // Check if click is on emote selector
-    const emoteSize = 40;
-    const padding = 10;
-    const totalWidth = emotes.length * (emoteSize + padding) - padding;
-    const startX = (canvas.width - totalWidth) / 2;
-
-    if (clickY < 50) {
-        emotes.forEach((emote, index) => {
-            if (clickX >= startX + index * (emoteSize + padding) &&
-                clickX < startX + (index + 1) * (emoteSize + padding) &&
-                clickY >= 10 && clickY < 50) {
-                selectedEmote = emote;
-                ws.send(JSON.stringify({ type: 'emote', emote: selectedEmote }));
-            }
-        });
-    } else if (players[clientId]) {
-        // Throw bullet
-        const player = players[clientId];
-        const angle = Math.atan2(clickY + camera.y - player.y, clickX + camera.x - player.x);
-        ws.send(JSON.stringify({
-            type: 'throw',
-            x: player.x,
-            y: player.y,
-            dx: Math.cos(angle) * BULLET_SPEED,
-            dy: Math.sin(angle) * BULLET_SPEED
-        }));
-    }
+emoteSelect.addEventListener('change', (e) => {
+    ws.send(JSON.stringify({ type: 'emote', emote: e.target.value }));
 });
 
 ws.onopen = () => {
-    playerSvg = generatePlayerSvg();
+    playerSvg = generatePlayerSvg(MAX_HEALTH);
 
     playerSvg.onload = () => {
         updateGame();
     };
 };
 
+
+// Prevent default behavior for arrow keys to avoid scrolling
 window.addEventListener('keydown', function(e) {
     if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].indexOf(e.code) > -1) {
         e.preventDefault();
     }
 }, false);
 
+// Initial canvas resize
 resizeCanvas();
