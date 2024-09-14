@@ -148,14 +148,8 @@ export class Renderer {
         const hue = (health / MAX_HEALTH) * 120; // 120 is green, 0 is red
         const color = `hsl(${hue}, 100%, 50%)`;
 
-        const body = document.createElementNS(svgNS, "circle");
-        body.setAttribute("cx", "20");
-        body.setAttribute("cy", "20");
-        body.setAttribute("r", "18");
+        const body = document.createElementNS(svgNS, "square");
         body.setAttribute("fill", color);
-        body.setAttribute("stroke", "#00ff31");
-        body.setAttribute("stroke-width", "1");
-
         svg.appendChild(body);
 
         const svgString = new XMLSerializer().serializeToString(svg);

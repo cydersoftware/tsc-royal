@@ -21,8 +21,8 @@ templates = Jinja2Templates(directory="templates")
 clients = {}
 
 # World size
-WORLD_WIDTH = 8000
-WORLD_HEIGHT = 5000
+WORLD_WIDTH = 1500
+WORLD_HEIGHT = 1500
 
 # Grid size
 GRID_SIZE = 90
