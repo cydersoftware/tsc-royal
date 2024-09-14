@@ -1,17 +1,18 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-from fastapi.requests import Request
-import json
-import random
 import asyncio
+import json
 import math
+import random
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.requests import Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount client files
+app.mount("/client", StaticFiles(directory="client"), name="client")
 
 # Set up Jinja2 templates
 templates = Jinja2Templates(directory="templates")

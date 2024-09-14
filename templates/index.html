@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Market Shooter</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('client', path='/css/style.css') }}">
     <style>
     body, html {
         margin: 0;
@@ -29,6 +29,6 @@
             </select>
         </div>
     </div>
-    <script src="{{ url_for('static', path='/js/game.js') }}"></script>
+    <script type="module" src="{{ url_for('client', path='/src/game.js') }}"></script>
 </body>
 </html>
