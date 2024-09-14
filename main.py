@@ -24,8 +24,8 @@ WORLD_WIDTH = 3000
 WORLD_HEIGHT = 3000
 
 # Grid size
-GRID_SIZE = 150
-WALL_THICKNESS = 10
+GRID_SIZE = 300
+WALL_THICKNESS = 20
 
 # Game state
 players = {}
@@ -39,54 +39,48 @@ WALL_MAX_HEALTH = 3
 PLAYER_RADIUS = 20
 MAX_HEALTH = 100
 BULLET_DAMAGE = 10
+GUN_LENGTH = 30
 
+def generate_simple_walls():
+    global walls
+    walls = []
 
-def generate_maze():
-    grid_width = WORLD_WIDTH // GRID_SIZE
-    grid_height = WORLD_HEIGHT // GRID_SIZE
+    # Create a grid
+    rows = WORLD_HEIGHT // GRID_SIZE
+    cols = WORLD_WIDTH // GRID_SIZE
 
-    # Initialize grid
-    grid = [[1 for _ in range(grid_width)] for _ in range(grid_height)]
-
-    def carve_path(x, y):
-        grid[y][x] = 0
-        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-        random.shuffle(directions)
-
-        for dx, dy in directions:
-            nx, ny = x + dx * 2, y + dy * 2
-            if 0 <= nx < grid_width and 0 <= ny < grid_height and grid[ny][nx] == 1:
-                grid[y + dy][x + dx] = 0
-                carve_path(nx, ny)
-
-    # Start carving from the center
-    carve_path(grid_width // 2, grid_height // 2)
-
-    # Generate walls based on the grid
-    for y in range(grid_height):
-        for x in range(grid_width):
-            if grid[y][x] == 1:
-                walls.append({
-                    "x": x * GRID_SIZE,
-                    "y": y * GRID_SIZE,
-                    "width": GRID_SIZE,
-                    "height": GRID_SIZE,
-                    "health": WALL_MAX_HEALTH
-                })
+    # Randomly place walls
+    for row in range(rows):
+        for col in range(cols):
+            if random.random() < 0.3:  # 30% chance to place a wall
+                wall_type = random.choice(['horizontal', 'vertical'])
+                if wall_type == 'horizontal':
+                    walls.append({
+                        "x": col * GRID_SIZE,
+                        "y": row * GRID_SIZE,
+                        "width": GRID_SIZE,
+                        "height": WALL_THICKNESS,
+                        "health": WALL_MAX_HEALTH
+                    })
+                else:  # vertical
+                    walls.append({
+                        "x": col * GRID_SIZE,
+                        "y": row * GRID_SIZE,
+                        "width": WALL_THICKNESS,
+                        "height": GRID_SIZE,
+                        "health": WALL_MAX_HEALTH
+                    })
 
     # Add border walls
     walls.extend([
         {"x": 0, "y": 0, "width": WORLD_WIDTH, "height": WALL_THICKNESS, "health": WALL_MAX_HEALTH},
         {"x": 0, "y": 0, "width": WALL_THICKNESS, "height": WORLD_HEIGHT, "health": WALL_MAX_HEALTH},
-        {"x": WORLD_WIDTH - WALL_THICKNESS, "y": 0, "width": WALL_THICKNESS, "height": WORLD_HEIGHT,
-         "health": WALL_MAX_HEALTH},
-        {"x": 0, "y": WORLD_HEIGHT - WALL_THICKNESS, "width": WORLD_WIDTH, "height": WALL_THICKNESS,
-         "health": WALL_MAX_HEALTH}
+        {"x": WORLD_WIDTH - WALL_THICKNESS, "y": 0, "width": WALL_THICKNESS, "height": WORLD_HEIGHT, "health": WALL_MAX_HEALTH},
+        {"x": 0, "y": WORLD_HEIGHT - WALL_THICKNESS, "width": WORLD_WIDTH, "height": WALL_THICKNESS, "health": WALL_MAX_HEALTH}
     ])
 
-
-generate_maze()
-
+# Generate walls at startup
+generate_simple_walls()
 
 @app.get("/", response_class=HTMLResponse)
 async def get(request: Request):
@@ -223,7 +217,7 @@ async def game_loop():
             "type": "updateWalls",
             "walls": walls
         }))
-        await asyncio.sleep(1 / 120)  # 60 FPS
+        await asyncio.sleep(1 / 60)  # 60 FPS
 
 @app.on_event("startup")
 async def startup_event():
