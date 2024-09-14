@@ -223,7 +223,7 @@ async def game_loop():
             "type": "updateWalls",
             "walls": walls
         }))
-        await asyncio.sleep(1 / 60)  # 60 FPS
+        await asyncio.sleep(1 / 120)  # 60 FPS
 
 @app.on_event("startup")
 async def startup_event():
