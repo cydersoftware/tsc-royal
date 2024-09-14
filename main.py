@@ -118,11 +118,18 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
                 # Validate player position
                 x = max(PLAYER_RADIUS, min(WORLD_WIDTH - PLAYER_RADIUS, event["x"]))
                 y = max(PLAYER_RADIUS, min(WORLD_HEIGHT - PLAYER_RADIUS, event["y"]))
-                if not any(w["x"] < x < w["x"] + w["width"] and w["y"] < y < w["y"] + w["height"] for w in walls):
+                if not any(w["x"] - PLAYER_RADIUS < x < w["x"] + w["width"] + PLAYER_RADIUS and
+                           w["y"] - PLAYER_RADIUS < y < w["y"] + w["height"] + PLAYER_RADIUS for w in walls):
                     players[client_id]["x"] = x
                     players[client_id]["y"] = y
                     players[client_id]["angle"] = event["angle"]
-                    await broadcast(json.dumps({"type": "move", "client_id": client_id, "x": x, "y": y, "angle": event["angle"]}))
+                    await broadcast(json.dumps({
+                        "type": "move",
+                        "client_id": client_id,
+                        "x": x,
+                        "y": y,
+                        "angle": event["angle"]
+                    }))
             elif event["type"] == "throw":
                 # Handle throwing money (bullets)
                 angle = event["angle"]
@@ -218,7 +225,6 @@ async def game_loop():
             "walls": walls
         }))
         await asyncio.sleep(1 / 60)  # 60 FPS
-
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(game_loop())

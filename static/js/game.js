@@ -18,6 +18,13 @@ const MAX_HEALTH = 100;
 const GUN_LENGTH = 30; // Length of the "gun" extending from the player
 const FLASH_DURATION = 100; // Duration of muzzle flash in milliseconds
 
+const INTERPOLATION_DELAY = 100; // ms
+let lastUpdateTime = 0;
+
+function lerp(start, end, t) {
+    return start * (1 - t) + end * t;
+}
+
 const ws = new WebSocket(`ws://${window.location.host}/ws/${clientId}`);
 
 ws.onmessage = (event) => {
@@ -26,23 +33,20 @@ ws.onmessage = (event) => {
     switch (data.type) {
         case 'init':
             players = data.players;
-            // Initialize angle and flashTimer for each player
-            for (let id in players) {
-                players[id].angle = players[id].angle || 0;
-                players[id].flashTimer = 0;
-            }
             walls = data.walls;
             WORLD_WIDTH = data.world_width;
             WORLD_HEIGHT = data.world_height;
             resizeCanvas();
             break;
         case 'move':
-            if (!players[data.client_id]) {
-                players[data.client_id] = {};
+            if (data.client_id !== clientId) {
+                if (!players[data.client_id]) {
+                    players[data.client_id] = {};
+                }
+                players[data.client_id].x = data.x;
+                players[data.client_id].y = data.y;
+                players[data.client_id].angle = data.angle;
             }
-            players[data.client_id].x = data.x;
-            players[data.client_id].y = data.y;
-            players[data.client_id].angle = data.angle;
             break;
         case 'throw':
             bullets.push(data.bullet);
@@ -131,6 +135,7 @@ function generatePlayerSvg(health) {
     return img;
 }
 
+
 function updatePlayerPosition() {
     if (!players[clientId]) return;
 
@@ -151,6 +156,11 @@ function updatePlayerPosition() {
 
         // Check collision with walls
         if (!checkWallCollision(newX, newY)) {
+            // Update local position immediately for responsiveness
+            players[clientId].x = newX;
+            players[clientId].y = newY;
+
+            // Send update to server
             ws.send(JSON.stringify({ type: 'move', x: newX, y: newY, angle: players[clientId].angle }));
         }
     }
@@ -270,8 +280,22 @@ function drawBullet(bullet) {
     ctx.fill();
 }
 
-function updateGame() {
+function interpolatePlayerPositions(currentTime) {
+    for (let id in players) {
+        if (id !== clientId && players[id].serverX !== undefined) {
+            const t = Math.min(1, (currentTime - players[id].lastUpdate) / INTERPOLATION_DELAY);
+            players[id].x = lerp(players[id].prevX, players[id].serverX, t);
+            players[id].y = lerp(players[id].prevY, players[id].serverY, t);
+        }
+    }
+}
+
+function updateGame(currentTime) {
+    if (lastUpdateTime === 0) lastUpdateTime = currentTime;
+    const deltaTime = currentTime - lastUpdateTime;
+
     updatePlayerPosition();
+    interpolatePlayerPositions(currentTime);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -285,7 +309,7 @@ function updateGame() {
     for (let id in players) {
         drawPlayer(players[id], id);
         if (players[id].flashTimer > 0) {
-            players[id].flashTimer -= 16; // Assume 60 FPS, so each frame is about 16ms
+            players[id].flashTimer -= deltaTime;
         }
     }
 
@@ -294,6 +318,7 @@ function updateGame() {
         drawBullet(bullet);
     }
 
+    lastUpdateTime = currentTime;
     requestAnimationFrame(updateGame);
 }
 
@@ -339,5 +364,8 @@ window.addEventListener('keydown', function(e) {
     }
 }, false);
 
-// Initial canvas resize
+// Initial canv
+// as resize
 resizeCanvas();
+// Start the game loop
+requestAnimationFrame(updateGame);
