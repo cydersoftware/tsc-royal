@@ -10,9 +10,8 @@ let camera = { x: 0, y: 0 };
 let playerSvg;
 
 let WORLD_WIDTH, WORLD_HEIGHT;
-const PLAYER_SPEED = 5;
-const PLAYER_RADIUS = 20;
-const BULLET_SPEED = 10;
+const PLAYER_SPEED = 2;
+const PLAYER_RADIUS = 12;
 const BULLET_RADIUS = 5;
 const MAX_HEALTH = 100;
 const GUN_LENGTH = 30; // Length of the "gun" extending from the player
@@ -104,30 +103,9 @@ function generatePlayerSvg(health) {
     body.setAttribute("r", "18");
     body.setAttribute("fill", color);
     body.setAttribute("stroke", "#2980b9");
-    body.setAttribute("stroke-width", "2");
-
-    const leftEye = document.createElementNS(svgNS, "circle");
-    leftEye.setAttribute("cx", "15");
-    leftEye.setAttribute("cy", "15");
-    leftEye.setAttribute("r", "3");
-    leftEye.setAttribute("fill", "white");
-
-    const rightEye = document.createElementNS(svgNS, "circle");
-    rightEye.setAttribute("cx", "25");
-    rightEye.setAttribute("cy", "15");
-    rightEye.setAttribute("r", "3");
-    rightEye.setAttribute("fill", "white");
-
-    const mouth = document.createElementNS(svgNS, "path");
-    mouth.setAttribute("d", "M13 25 Q20 30 27 25");
-    mouth.setAttribute("stroke", "#2980b9");
-    mouth.setAttribute("stroke-width", "2");
-    mouth.setAttribute("fill", "none");
+    body.setAttribute("stroke-width", "76");
 
     svg.appendChild(body);
-    svg.appendChild(leftEye);
-    svg.appendChild(rightEye);
-    svg.appendChild(mouth);
 
     const svgString = new XMLSerializer().serializeToString(svg);
     const img = new Image();
@@ -184,64 +162,83 @@ function checkWallCollision(x, y) {
 }
 
 function drawWalls() {
+    const baseColor = 160;
+    const shadeDarkness = 40;
+    const perspective = 0.5;
+    const wallHeight = 50;
+
     for (let wall of walls) {
-        if (wall.x - camera.x + wall.width > 0 &&
-            wall.x - camera.x < canvas.width &&
-            wall.y - camera.y + wall.height > 0 &&
-            wall.y - camera.y < canvas.height) {
+        // Check if the wall is within the camera view
+        const wallX = wall.x - camera.x;
+        const wallY = wall.y - camera.y;
 
-            const wallHeight = 50;
-            const perspective = 0.5;
+        if (wallX + wall.width > 0 && wallX < canvas.width &&
+            wallY + wall.height > 0 && wallY < canvas.height) {
 
-            const baseColor = 160;
-            const shadeDarkness = 40;
+            // Calculate damage effect
             const damageEffect = (3 - wall.health) * 30;
+            const topColor = baseColor - damageEffect;
+            const rightFaceColor = baseColor - shadeDarkness - damageEffect;
+            const frontFaceColor = baseColor - shadeDarkness * 2 - damageEffect;
+            const leftFaceColor = baseColor - shadeDarkness * 1.5 - damageEffect;
 
             // Top face
-            ctx.fillStyle = `rgb(${baseColor - damageEffect}, ${baseColor - damageEffect}, ${baseColor - damageEffect})`;
+            ctx.fillStyle = `rgb(${topColor}, ${topColor}, ${topColor})`;
             ctx.beginPath();
-            ctx.moveTo(wall.x - camera.x, wall.y - camera.y);
-            ctx.lineTo(wall.x - camera.x + wall.width, wall.y - camera.y);
-            ctx.lineTo(wall.x - camera.x + wall.width - wallHeight * perspective, wall.y - camera.y - wallHeight);
-            ctx.lineTo(wall.x - camera.x - wallHeight * perspective, wall.y - camera.y - wallHeight);
+            ctx.moveTo(wallX, wallY);
+            ctx.lineTo(wallX + wall.width, wallY);
+            ctx.lineTo(wallX + wall.width - wallHeight * perspective, wallY - wallHeight);
+            ctx.lineTo(wallX - wallHeight * perspective, wallY - wallHeight);
             ctx.closePath();
             ctx.fill();
 
             // Right face (lighter)
-            ctx.fillStyle = `rgb(${baseColor - shadeDarkness - damageEffect}, ${baseColor - shadeDarkness - damageEffect}, ${baseColor - shadeDarkness - damageEffect})`;
+            ctx.fillStyle = `rgb(${rightFaceColor}, ${rightFaceColor}, ${rightFaceColor})`;
             ctx.beginPath();
-            ctx.moveTo(wall.x - camera.x + wall.width, wall.y - camera.y);
-            ctx.lineTo(wall.x - camera.x + wall.width, wall.y - camera.y + wall.height);
-            ctx.lineTo(wall.x - camera.x + wall.width - wallHeight * perspective, wall.y - camera.y + wall.height - wallHeight);
-            ctx.lineTo(wall.x - camera.x + wall.width - wallHeight * perspective, wall.y - camera.y - wallHeight);
+            ctx.moveTo(wallX + wall.width, wallY);
+            ctx.lineTo(wallX + wall.width, wallY + wall.height);
+            ctx.lineTo(wallX + wall.width - wallHeight * perspective, wallY + wall.height - wallHeight);
+            ctx.lineTo(wallX + wall.width - wallHeight * perspective, wallY - wallHeight);
+            ctx.closePath();
+            ctx.fill();
+
+            // Left face (darker)
+            ctx.fillStyle = `rgb(${leftFaceColor}, ${leftFaceColor}, ${leftFaceColor})`;
+            ctx.beginPath();
+            ctx.moveTo(wallX, wallY);
+            ctx.lineTo(wallX, wallY + wall.height);
+            ctx.lineTo(wallX - wallHeight * perspective, wallY + wall.height - wallHeight);
+            ctx.lineTo(wallX - wallHeight * perspective, wallY - wallHeight);
             ctx.closePath();
             ctx.fill();
 
             // Front face
-            ctx.fillStyle = `rgb(${baseColor - shadeDarkness*2 - damageEffect}, ${baseColor - shadeDarkness*2 - damageEffect}, ${baseColor - shadeDarkness*2 - damageEffect})`;
+            ctx.fillStyle = `rgb(${frontFaceColor}, ${frontFaceColor}, ${frontFaceColor})`;
             ctx.beginPath();
-            ctx.moveTo(wall.x - camera.x, wall.y - camera.y);
-            ctx.lineTo(wall.x - camera.x, wall.y - camera.y + wall.height);
-            ctx.lineTo(wall.x - camera.x + wall.width, wall.y - camera.y + wall.height);
-            ctx.lineTo(wall.x - camera.x + wall.width, wall.y - camera.y);
+            ctx.moveTo(wallX, wallY);
+            ctx.lineTo(wallX, wallY + wall.height);
+            ctx.lineTo(wallX + wall.width, wallY + wall.height);
+            ctx.lineTo(wallX + wall.width, wallY);
             ctx.closePath();
             ctx.fill();
 
-            // Draw cracks to represent damage
+            // Draw cracks for damage
             if (wall.health < 3) {
                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
                 ctx.lineWidth = 2;
                 const crackCount = 4 - wall.health;
                 for (let i = 0; i < crackCount; i++) {
                     ctx.beginPath();
-                    ctx.moveTo(wall.x - camera.x + Math.random() * wall.width, wall.y - camera.y);
-                    ctx.lineTo(wall.x - camera.x + Math.random() * wall.width, wall.y - camera.y + wall.height);
+                    ctx.moveTo(wallX + Math.random() * wall.width, wallY);
+                    ctx.lineTo(wallX + Math.random() * wall.width, wallY + wall.height);
                     ctx.stroke();
                 }
             }
         }
     }
 }
+
+
 
 function drawPlayer(player, id) {
     const isCurrentPlayer = id == clientId;
