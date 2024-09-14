@@ -102,8 +102,8 @@ function generatePlayerSvg(health) {
     body.setAttribute("cy", "20");
     body.setAttribute("r", "18");
     body.setAttribute("fill", color);
-    body.setAttribute("stroke", "#2980b9");
-    body.setAttribute("stroke-width", "76");
+    body.setAttribute("stroke", "#00ff31");
+    body.setAttribute("stroke-width", "1");
 
     svg.appendChild(body);
 
@@ -182,35 +182,35 @@ function drawWalls() {
             const frontFaceColor = baseColor - shadeDarkness * 2 - damageEffect;
             const leftFaceColor = baseColor - shadeDarkness * 1.5 - damageEffect;
 
-            // Top face
-            ctx.fillStyle = `rgb(${topColor}, ${topColor}, ${topColor})`;
-            ctx.beginPath();
-            ctx.moveTo(wallX, wallY);
-            ctx.lineTo(wallX + wall.width, wallY);
-            ctx.lineTo(wallX + wall.width - wallHeight * perspective, wallY - wallHeight);
-            ctx.lineTo(wallX - wallHeight * perspective, wallY - wallHeight);
-            ctx.closePath();
-            ctx.fill();
+            // // Top face
+            // ctx.fillStyle = `rgb(${topColor}, ${topColor}, ${topColor})`;
+            // ctx.beginPath();
+            // ctx.moveTo(wallX, wallY);
+            // ctx.lineTo(wallX + wall.width, wallY);
+            // ctx.lineTo(wallX + wall.width - wallHeight * perspective, wallY - wallHeight);
+            // ctx.lineTo(wallX - wallHeight * perspective, wallY - wallHeight);
+            // ctx.closePath();
+            // ctx.fill();
+            //
+            // // Right face (lighter)
+            // ctx.fillStyle = `rgb(${rightFaceColor}, ${rightFaceColor}, ${rightFaceColor})`;
+            // ctx.beginPath();
+            // ctx.moveTo(wallX + wall.width, wallY);
+            // ctx.lineTo(wallX + wall.width, wallY + wall.height);
+            // ctx.lineTo(wallX + wall.width - wallHeight * perspective, wallY + wall.height - wallHeight);
+            // ctx.lineTo(wallX + wall.width - wallHeight * perspective, wallY - wallHeight);
+            // ctx.closePath();
+            // ctx.fill();
 
-            // Right face (lighter)
-            ctx.fillStyle = `rgb(${rightFaceColor}, ${rightFaceColor}, ${rightFaceColor})`;
-            ctx.beginPath();
-            ctx.moveTo(wallX + wall.width, wallY);
-            ctx.lineTo(wallX + wall.width, wallY + wall.height);
-            ctx.lineTo(wallX + wall.width - wallHeight * perspective, wallY + wall.height - wallHeight);
-            ctx.lineTo(wallX + wall.width - wallHeight * perspective, wallY - wallHeight);
-            ctx.closePath();
-            ctx.fill();
-
-            // Left face (darker)
-            ctx.fillStyle = `rgb(${leftFaceColor}, ${leftFaceColor}, ${leftFaceColor})`;
-            ctx.beginPath();
-            ctx.moveTo(wallX, wallY);
-            ctx.lineTo(wallX, wallY + wall.height);
-            ctx.lineTo(wallX - wallHeight * perspective, wallY + wall.height - wallHeight);
-            ctx.lineTo(wallX - wallHeight * perspective, wallY - wallHeight);
-            ctx.closePath();
-            ctx.fill();
+            // // Left face (darker)
+            // ctx.fillStyle = `rgb(${leftFaceColor}, ${leftFaceColor}, ${leftFaceColor})`;
+            // ctx.beginPath();
+            // ctx.moveTo(wallX, wallY);
+            // ctx.lineTo(wallX, wallY + wall.height);
+            // ctx.lineTo(wallX - wallHeight * perspective, wallY + wall.height - wallHeight);
+            // ctx.lineTo(wallX - wallHeight * perspective, wallY - wallHeight);
+            // ctx.closePath();
+            // ctx.fill();
 
             // Front face
             ctx.fillStyle = `rgb(${frontFaceColor}, ${frontFaceColor}, ${frontFaceColor})`;
