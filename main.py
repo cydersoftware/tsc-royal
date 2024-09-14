@@ -20,12 +20,12 @@ templates = Jinja2Templates(directory="templates")
 clients = {}
 
 # World size
-WORLD_WIDTH = 3000
-WORLD_HEIGHT = 3000
+WORLD_WIDTH = 1000
+WORLD_HEIGHT = 1000
 
 # Grid size
-GRID_SIZE = 150
-WALL_THICKNESS = 10
+GRID_SIZE = 100
+WALL_THICKNESS = 5
 
 # Game state
 players = {}
