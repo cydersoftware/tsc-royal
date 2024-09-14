@@ -190,13 +190,42 @@ function drawWalls() {
             wall.y - camera.y + wall.height > 0 &&
             wall.y - camera.y < canvas.height) {
 
+            const wallHeight = 50;
+            const perspective = 0.5;
+
             const baseColor = 160;
             const shadeDarkness = 40;
             const damageEffect = (3 - wall.health) * 30;
 
-            // Draw wall
+            // Top face
             ctx.fillStyle = `rgb(${baseColor - damageEffect}, ${baseColor - damageEffect}, ${baseColor - damageEffect})`;
-            ctx.fillRect(wall.x - camera.x, wall.y - camera.y, wall.width, wall.height);
+            ctx.beginPath();
+            ctx.moveTo(wall.x - camera.x, wall.y - camera.y);
+            ctx.lineTo(wall.x - camera.x + wall.width, wall.y - camera.y);
+            ctx.lineTo(wall.x - camera.x + wall.width - wallHeight * perspective, wall.y - camera.y - wallHeight);
+            ctx.lineTo(wall.x - camera.x - wallHeight * perspective, wall.y - camera.y - wallHeight);
+            ctx.closePath();
+            ctx.fill();
+
+            // Right face (lighter)
+            ctx.fillStyle = `rgb(${baseColor - shadeDarkness - damageEffect}, ${baseColor - shadeDarkness - damageEffect}, ${baseColor - shadeDarkness - damageEffect})`;
+            ctx.beginPath();
+            ctx.moveTo(wall.x - camera.x + wall.width, wall.y - camera.y);
+            ctx.lineTo(wall.x - camera.x + wall.width, wall.y - camera.y + wall.height);
+            ctx.lineTo(wall.x - camera.x + wall.width - wallHeight * perspective, wall.y - camera.y + wall.height - wallHeight);
+            ctx.lineTo(wall.x - camera.x + wall.width - wallHeight * perspective, wall.y - camera.y - wallHeight);
+            ctx.closePath();
+            ctx.fill();
+
+            // Front face
+            ctx.fillStyle = `rgb(${baseColor - shadeDarkness*2 - damageEffect}, ${baseColor - shadeDarkness*2 - damageEffect}, ${baseColor - shadeDarkness*2 - damageEffect})`;
+            ctx.beginPath();
+            ctx.moveTo(wall.x - camera.x, wall.y - camera.y);
+            ctx.lineTo(wall.x - camera.x, wall.y - camera.y + wall.height);
+            ctx.lineTo(wall.x - camera.x + wall.width, wall.y - camera.y + wall.height);
+            ctx.lineTo(wall.x - camera.x + wall.width, wall.y - camera.y);
+            ctx.closePath();
+            ctx.fill();
 
             // Draw cracks to represent damage
             if (wall.health < 3) {
@@ -205,13 +234,8 @@ function drawWalls() {
                 const crackCount = 4 - wall.health;
                 for (let i = 0; i < crackCount; i++) {
                     ctx.beginPath();
-                    if (wall.width > wall.height) {  // horizontal wall
-                        ctx.moveTo(wall.x - camera.x + Math.random() * wall.width, wall.y - camera.y);
-                        ctx.lineTo(wall.x - camera.x + Math.random() * wall.width, wall.y - camera.y + wall.height);
-                    } else {  // vertical wall
-                        ctx.moveTo(wall.x - camera.x, wall.y - camera.y + Math.random() * wall.height);
-                        ctx.lineTo(wall.x - camera.x + wall.width, wall.y - camera.y + Math.random() * wall.height);
-                    }
+                    ctx.moveTo(wall.x - camera.x + Math.random() * wall.width, wall.y - camera.y);
+                    ctx.lineTo(wall.x - camera.x + Math.random() * wall.width, wall.y - camera.y + wall.height);
                     ctx.stroke();
                 }
             }
